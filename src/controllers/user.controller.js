@@ -4,6 +4,22 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js"
 import {APIResponse} from "../utils/APIResponse.js"
 
+const generateAccessTokenandRefreshToken = async (userId)=>
+{
+    try {//find user by userid
+        const user = await User.findById(userId);
+        //generate access and refresh token
+      const accessToken= user.generateAccessToken()
+       const refreshToken=user.generateRefreshToken()
+        user.refreshToken = refreshToken//put this refresh token into user database
+        await user.save({ validateBeforeSave: false })//save the refresh token in user database without validation(password)
+
+        //return kr denge accesstoken and refreshtoken
+        return {accessToken,refreshToken}
+    } catch (error) {
+        throw new APIError(500,"something went wrong while gnerating refresh and access token")
+    }
+}
 const registerUser = asyncHandler(async (req, res) => {
     //get user details from frontend
     //validation-not empty
@@ -87,4 +103,81 @@ const registerUser = asyncHandler(async (req, res) => {
     )
 })
 
-export {registerUser}
+const loginUser = asyncHandler(async (req, res) => {
+    //req body->data
+    //username or email
+    //check find user or not
+    //check password
+    //access and refresh token
+    //send cookie
+
+    //req data from body
+    const { email, username, password } = req.body;
+
+    //check find user
+    if (!email || !username) {
+        throw new APIError(400,"username or email is required")
+    }
+     
+   const user=await User.findOne(
+       {
+           $or: [{username}, {email}]
+       })
+    
+    if (!user) {
+        throw new APIError(400,"user doesn't exist")
+    }
+    //check password
+    const ispassword = await user.isPasswordCorrect(password);
+
+    if (!ispassword) {
+        throw new APIError(401,"invalid user credientials")
+    }
+
+    //access and refresh token create
+  const {accessToken,refreshToken}= await generateAccessTokenandRefreshToken(user._id)//await is used bacaouse kya pta time se token generate hote hai ya nhi
+    
+    const loggedInUser = await User.findById(user._id).
+        select("-password -refreshToken")//password and refreshtoken ko=]
+    //send in cookies
+    const options = {
+        httpOnly: true,
+        secure:true
+    }
+
+    return res.status(200).cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", refreshToken, options)
+        .json(
+            new APIResponse(200, {
+            user:loggedInUser,accessToken,refreshToken
+            },
+            "user logged in successfully")
+    )
+
+})
+
+const logoutUser = asyncHandler(async (req, res) => {
+    //find user by id
+   await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $set: {//here set is a operator it take an object and update the field that we are give it
+               refreshToken:undefined
+           }
+        }, {
+           new:true //in return that response we are get will be new updated
+       }
+    )
+ const options = {
+        httpOnly: true,
+        secure:true
+    }
+    return res
+        .status(200)
+        .clearCookie("accessToken", options)
+        .clearCookie("refreshToken", options)
+    .json(new APIResponse(200,{},"user logged out"))
+}
+)
+
+export {registerUser,loginUser,logoutUser}
