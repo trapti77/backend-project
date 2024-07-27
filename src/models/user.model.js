@@ -47,7 +47,7 @@ const userSchema = new Schema({
     {
     timestamps:true
 })
-userSchema.pre("save", async function () {
+userSchema.pre("save", async function (next) {
     this.password = await bcrypt.hash(this.password, 10)
     next()
 })//herewhen data is saved before that we have to encrypt password

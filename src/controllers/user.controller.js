@@ -14,6 +14,7 @@ const registerUser = asyncHandler(async (req, res) => {
     //remove password and refresh token field from response
     //check for user creation
     //return res
+    //get user details from forntend
     const { fullname, email, username, password } = req.body;
    /* console.log("fullname: ", fullname);
     console.log("email : ", email);
@@ -22,13 +23,15 @@ const registerUser = asyncHandler(async (req, res) => {
    /* if (fullname === "") {
         throw new APIError(400,"fullname is required")
     } OR */
+    //validate not empty
     if ([fullname, email, username, password].some((field) =>
         field?.trim() === "")
     ) {
         throw new APIError(400,"all fields are required")
     }
 
-  const existuser= User.findOne({
+    //check if user already exist
+  const existuser= await User.findOne({
         $or:[{username},{email}]
   })
     
@@ -36,16 +39,23 @@ const registerUser = asyncHandler(async (req, res) => {
         throw new APIError(409,"user with email or username already exist")
     }
 
-    //for file
+   // console.log(req.files);
+    //chaeck image or for avatar
     const avatarlocalpath = req.files?.avatar[0]?.path;
-    const coverimagelocalpath = req.files?.coverimage[0]?.path;
+    //const coverimagelocalpath = req.files?.coverimage[0]?.path;
+    let coverimagelocalpath;
+    if (req.files && Array.isArray(req.files.coverimage) && req.files.coverimage.length > 0) {
+        coverimagelocalpath=req.files.coverimage[0].path
+    }
     if (!avatarlocalpath) {
         throw new APIError(400,"avatar files is required")
     }
 
     //upload oncloudinary
     const avatar = await uploadOnCloudinary(avatarlocalpath);
+   // console.log(avatar)
     const coverimage = await uploadOnCloudinary(coverimagelocalpath);
+   // console.log(coverimage)
     
     if (!avatar) {
         throw new APIError(400,"avatar is required")
