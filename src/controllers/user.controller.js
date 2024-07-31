@@ -65,11 +65,11 @@ const registerUser = asyncHandler(async (req, res) => {
 
    // console.log(req.files);
     //chaeck image or for avatar
-    const avatarlocalpath = req.files?.avatar[0]?.path;
+    const avatarlocalpath = req.files?.avatar?.[0]?.path;
     //const coverimagelocalpath = req.files?.coverimage[0]?.path;
     let coverimagelocalpath;
     if (req.files && Array.isArray(req.files.coverimage) && req.files.coverimage.length > 0) {
-        coverimagelocalpath=req.files.coverimage[0].path
+        coverimagelocalpath=req.files.coverimage?.[0]?.path
     }
     if (!avatarlocalpath) {
         throw new APIError(400,"avatar files is required")
@@ -137,6 +137,7 @@ const loginUser = asyncHandler(async (req, res) => {
     }
     //check password
     const ispassword = await user.isPasswordCorrect(password);
+   // console.log(ispassword);
 
     if (!ispassword) {
         throw new APIError(401,"invalid user credientials")
@@ -169,8 +170,8 @@ const logoutUser = asyncHandler(async (req, res) => {
    await User.findByIdAndUpdate(
         req.user._id,
         {
-            $set: {//here set is a operator it take an object and update the field that we are give it
-               refreshToken:undefined
+            $unset: {//here set is a operator it take an object and update the field that we are give it
+               refreshToken:1//this removes the field from the document
            }
         }, {
            new:true //in return that response we are get will be new updated
@@ -319,15 +320,15 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
         throw new APIError(400, "cover image missing ");
     }
 
-    const  coverImage = await uploadOnCloudinary(converimagepath);
-    if (! coverImage.url) {
+    const  coverimage = await uploadOnCloudinary(converimagepath);
+    if (! coverimage.url) {
         throw new APIError(400,"error while uploading file on cloudinary")
     }
 
    const user= await User.findById(req.user?._id,
         {
             $set: {
-                 coverImage: coverImage.url
+                 coverimage: coverimage.url
             }
         },
         {

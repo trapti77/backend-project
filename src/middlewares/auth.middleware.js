@@ -8,12 +8,13 @@ import { User } from "../models/user.model.js";
 
 export const verifyJWT = asyncHandler(async (req, res, next) => {
     try {
-        const token = req.cookies?.accessToken || req.header("Athorization")?.replace("Bearer ", "");
+        const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "");
         //above access token from cookies and accesstoke or from  header athorization
         //yeadi athorization true hai then ham bearer and uske baad ek space lagayenge beacuse 
         //syntax  Athorization:Bearer <Token>
+       // console.log("TOKEN:",token)
         if (!token) {
-            throw new APIError(401,"unathorized request")
+            throw new APIError(401,"unauthorized request")
         }
         //yadi token hai 
         const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);//verify current token and decoded token
